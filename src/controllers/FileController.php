@@ -1,6 +1,6 @@
 <?php
 namespace App\Controllers;
-
+require_once __DIR__ . '/../config/config.php'; 
 use App\Services\FileService;
 use App\Utils\SecurityUtils;
 
