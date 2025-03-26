@@ -27,8 +27,7 @@ A simple and lightweight PHP-based file manager that allows users to browse, upl
 ### Using Composer (Recommended)
 1. Add the package to your project:
    ```bash
-   composer require youngkmd/freedom 
-   
+   composer require youngkmd/freedom
    
 ## Manual Installation
 1. Clone or download this repository:
