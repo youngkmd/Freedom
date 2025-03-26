@@ -1,6 +1,7 @@
 {
     "name": "youngkmd/freedom",
     "description": "Freedom Manager - A powerful file and project management system",
+    "version": "v1.0.0",
     "type": "project",
     "license": "MIT",
     "authors": [
