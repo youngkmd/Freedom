@@ -27,13 +27,13 @@ A simple and lightweight PHP-based file manager that allows users to browse, upl
 ### Using Composer (Recommended)
 1. Add the package to your project:
    ```bash
-   composer require youngkmd/freedom ```
+   composer require youngkmd/freedom 
    
    
 ## Manual Installation
 1. Clone or download this repository:
     ```bash
-	git clone https://github.com/youngkmd/freedom.git  ```
+	git clone https://github.com/youngkmd/freedom.git 
 2. Move the files to your web server's document root (e.g., /var/www/html or C:\xampp\htdocs).
 3. Install dependencies:
 ```bash composer install```
@@ -58,5 +58,17 @@ A simple and lightweight PHP-based file manager that allows users to browse, upl
 ## Troubleshooting
 - If you encounter issues, enable PHP error reporting by adding this to index.php:
 
-```bash ini_set('display_errors', 1);
-error_reporting(E_ALL); ```
+```bash ini_set('display_errors', 1); ```
+```bash error_reporting(E_ALL); ```
+
+- Check server logs for detailed error messages.
+
+
+## Contributing
+- Feel free to fork this repository, submit issues, or create pull requests to improve the project!
+
+## License
+- This project is licensed under the MIT License. See the  file for details.
+
+## Credits
+- Developed by Youngkmd.
