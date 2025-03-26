@@ -1,8 +1,8 @@
 {
     "name": "youngkmd/freedom",
     "description": "Freedom Manager - A powerful file and project management system",
-    "version": "v1.0.0",
     "type": "project",
+    "version": "1.0.0",
     "license": "MIT",
     "authors": [
         {
@@ -13,7 +13,16 @@
     ],
     "require": {
         "php": "^8.0",
-        "ext-zip": "*"
+        "ext-zip": "*",
+        "ext-fileinfo": "*"
+    },
+    "suggest": {
+        "ext-gd": "For image processing (e.g., thumbnails)",
+        "ext-mbstring": "For better string handling"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "phpstan/phpstan": "^1.8"
     },
     "autoload": {
         "psr-4": {
@@ -28,6 +37,7 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "scripts": {
+        "serve": "php -S localhost:8000 -t public",
         "post-autoload-dump": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ]
