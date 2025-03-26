@@ -22,13 +22,6 @@ A simple and lightweight PHP-based file manager that allows users to browse, upl
   - `fileinfo` (for file type detection)
 - Write permissions on the target directory
 
-## Installation
-
-### Using Composer (Recommended)
-1. Add the package to your project:
-   ```bash
-   composer require youngkmd/freedom
-   
 ## Manual Installation
 1. Clone or download this repository:
     ```bash
