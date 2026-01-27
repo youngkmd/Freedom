@@ -21,25 +21,27 @@ done
 
 if [ "$paramT" == "2012" ]; then
      OSname="Windows Server 2012 R2"
-     Targeturl="http://files.rklucky.com/2012.gz"
+     Targeturl="https://archive.org/download/windows-server-2012-r2/windows-server-2012-r2.gz"
 elif [ "$paramT" == "2016" ]; then
      OSname="Windows Server 2016"
-     Targeturl="http://files.rklucky.com/2016.gz"
+     Targeturl="https://archive.org/download/windows-server-2016/windows-server-2016.gz"
 elif [ "$paramT" == "2019" ]; then
      OSname="Windows Server 2019"
-     Targeturl="http://files.rklucky.com/2019.gz"
+     Targeturl="https://archive.org/download/windows-server-2019/windows-server-2019.gz"
 elif [ "$paramT" == "2022" ]; then
      OSname="Windows Server 2022"
-     Targeturl="http://files.rklucky.com/2022.gz"
+     Targeturl="https://archive.org/download/windows-server-2022/windows-server-2022.gz"
 elif [ "$paramT" == "10" ]; then
      OSname="Windows 10 Pro"
-     Targeturl="http://files.rklucky.com/10.gz"
+     Targeturl="https://archive.org/download/windows-10-pro-x64/windows-10-pro-x64.gz"
 elif [ "$paramT" == "2008" ]; then
      OSname="Windows Server 2008 R2"
-     Targeturl="http://files.rklucky.com/2008.gz"
+     Targeturl="https://archive.org/download/windows-server-2008-r2/windows-server-2008-r2.gz"
 else
-     echo "Error not found!"
+     echo "Error: OS not supported"
+     exit 1
 fi
+
 
 interface=eth0
 iAddr=`ip addr show dev $interface |grep "inet.*" |head -n1 |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[0-9]\{1,2\}'`
