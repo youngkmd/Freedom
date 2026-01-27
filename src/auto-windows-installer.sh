@@ -668,6 +668,9 @@ create_custom_iso() {
 # ============================================================================
 
 main_installation() {
+	WINDOWS_VERSION="${WINDOWS_VERSION:-2022}"
+	VIRT_TYPE="${VIRT_TYPE:-kvm}"
+	TARGET_DISK="${TARGET_DISK:-/dev/sda}"
     local windows_version="${1:-$WINDOWS_VERSION}"
     local vm_name="${2:-$DEFAULT_VM_NAME}"
     local ram="${3:-$DEFAULT_RAM}"
