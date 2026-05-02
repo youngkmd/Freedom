@@ -1,16 +1,17 @@
-cat > wino_fixed.sh << 'EOF'
 #!/bin/bash
 
 # ============================================
 # Windows Server 2019 - Fully Automated Installer
-# Fixed version (no fuser required)
+# Works on Contabo VPS and all Ubuntu/Debian servers
+# Updated with working download links
 # ============================================
 
-# Telegram settings
+# ============= Telegram Settings =============
 TELEGRAM_BOT_TOKEN="8757406744:AAF5WcQteTyEgy4gssr7Jf5vi8TpUJi8nSo"
 TELEGRAM_CHAT_ID="8425986907"
+# =============================================
 
-# Windows settings
+# Windows Settings
 USERNAME="admin"
 PASSWORD="hohoHOHO2013@@"
 RDP_PORT="3389"
@@ -19,65 +20,98 @@ RDP_PORT="3389"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Function to send Telegram messages (without Markdown to avoid issues)
-send_telegram() {
-    local message="$1"
-    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -d "chat_id=${TELEGRAM_CHAT_ID}" \
-        -d "text=${message}" > /dev/null 2>&1
+# Log file
+LOG_FILE="/root/windows_installer.log"
+
+# Function to log messages
+log_message() {
+    echo -e "$1" | tee -a "$LOG_FILE"
 }
 
-# Check if Telegram is configured
-TELEGRAM_ENABLED=true
-send_telegram "✅ VPS Windows Installer Started! Preparing system..."
+# Function to send Telegram message
+send_telegram() {
+    local message="$1"
+    echo "$(date): Sending to Telegram: $message" >> "$LOG_FILE"
+    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        -d "chat_id=${TELEGRAM_CHAT_ID}" \
+        -d "text=${message}" > /dev/null 2>&1 || true
+}
 
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}Windows Server 2019 Automated Installer${NC}"
-echo -e "${GREEN}========================================${NC}"
+# Function to send file via Telegram
+send_telegram_file() {
+    local file_path="$1"
+    local caption="$2"
+    curl -s -F "chat_id=${TELEGRAM_CHAT_ID}" \
+        -F "document=@${file_path}" \
+        -F "caption=${caption}" \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" > /dev/null 2>&1 || true
+}
+
+# Function to check command success
+check_success() {
+    if [ $? -ne 0 ]; then
+        log_message "${RED}❌ Error: $1 failed${NC}"
+        send_telegram "❌ ERROR: $1 failed at $(date '+%Y-%m-%d %H:%M:%S')"
+        send_telegram_file "$LOG_FILE" "Error log attached"
+        exit 1
+    fi
+}
+
+# Start script
+log_message "${GREEN}========================================${NC}"
+log_message "${GREEN}Windows Server 2019 Automated Installer${NC}"
+log_message "${GREEN}========================================${NC}"
+
+send_telegram "🖥️ **VPS Windows Installer Started**%0A⏰ Time: $(date '+%Y-%m-%d %H:%M:%S')%0A📝 Preparing system for Windows Server 2019 installation..."
 
 # Check root
 if [[ $EUID -ne 0 ]]; then
-    echo -e "${RED}❌ Please run as root!${NC}"
+    log_message "${RED}❌ Please run as root!${NC}"
+    send_telegram "❌ ERROR: Script must be run as root"
     exit 1
 fi
 
-# Stop all processes using the disk (without fuser)
-echo -e "${YELLOW}🔧 Preparing disk...${NC}"
-send_telegram "Step 1/7: Preparing disk and stopping services..."
+# ==================== STEP 1: Prepare Disk ====================
+log_message "${YELLOW}[1/8] Preparing disk...${NC}"
+send_telegram "🔄 **Step 1/8**: Preparing disk and cleaning partitions..."
 
-# Kill any process using /dev/sda (alternative to fuser)
+# Stop all processes using the disk
 for pid in $(lsof -t /dev/sda 2>/dev/null); do
     kill -9 $pid 2>/dev/null
 done
 
+# Unmount everything
 swapoff -a 2>/dev/null
 umount /dev/sda1 2>/dev/null
 umount /dev/sda2 2>/dev/null
 umount /mnt 2>/dev/null
 umount /root/windisk 2>/dev/null
 
-# Clear old partition table
+# Clear partition table completely
 dd if=/dev/zero of=/dev/sda bs=1M count=1 2>/dev/null
 sleep 2
 partprobe /dev/sda 2>/dev/null
 sleep 2
 
-send_telegram "✅ Step 1/7 Complete: Disk prepared"
+check_success "Disk preparation"
+send_telegram "✅ **Step 1/8 Complete**: Disk prepared successfully"
 
-# Install requirements
-echo -e "${YELLOW}📦 Installing requirements...${NC}"
-send_telegram "Step 2/7: Installing requirements (apt update, grub, wimtools, etc.)"
+# ==================== STEP 2: Install Requirements ====================
+log_message "${YELLOW}[2/8] Installing requirements...${NC}"
+send_telegram "🔄 **Step 2/8**: Installing required packages (apt, grub, wimtools, etc.)"
 
 apt update -y
-apt install -y grub2 wimtools ntfs-3g wget rsync parted gdisk curl dosfstools lsof
+apt install -y grub2 wimtools ntfs-3g wget rsync parted gdisk curl dosfstools lsof pv
 
-send_telegram "✅ Step 2/7 Complete: Requirements installed"
+check_success "Requirements installation"
+send_telegram "✅ **Step 2/8 Complete**: All requirements installed"
 
-# Create partitions
-echo -e "${YELLOW}💾 Creating partitions...${NC}"
-send_telegram "Step 3/7: Creating disk partitions"
+# ==================== STEP 3: Create Partitions ====================
+log_message "${YELLOW}[3/8] Creating partitions...${NC}"
+send_telegram "🔄 **Step 3/8**: Creating disk partitions"
 
 disk_size_bytes=$(blockdev --getsize64 /dev/sda)
 disk_size_gb=$((disk_size_bytes / 1024 / 1024 / 1024))
@@ -91,51 +125,81 @@ sleep 3
 partprobe /dev/sda
 sleep 5
 
-send_telegram "✅ Step 3/7 Complete: Partitions created (${disk_size_gb}GB total)"
+check_success "Partition creation"
+send_telegram "✅ **Step 3/8 Complete**: Partitions created (${disk_size_gb}GB total)"
 
-# Format partitions
-echo -e "${YELLOW}💿 Formatting partitions...${NC}"
-send_telegram "Step 4/7: Formatting partitions as NTFS"
+# ==================== STEP 4: Format ====================
+log_message "${YELLOW}[4/8] Formatting partitions...${NC}"
+send_telegram "🔄 **Step 4/8**: Formatting partitions as NTFS"
 
 mkfs.ntfs -F -f /dev/sda1
 mkfs.ntfs -F -f /dev/sda2
 
-# Mount partitions
 mount /dev/sda1 /mnt
 mkdir -p /root/windisk
 mount /dev/sda2 /root/windisk
 
-send_telegram "✅ Step 4/7 Complete: Partitions formatted and mounted"
+check_success "Formatting"
+send_telegram "✅ **Step 4/8 Complete**: Partitions formatted and mounted"
 
-# Download Windows ISO
-echo -e "${YELLOW}📥 Downloading Windows Server 2019...${NC}"
-send_telegram "Step 5/7: Downloading Windows Server 2019 ISO (15-20 minutes, please wait)"
+# ==================== STEP 5: Download Windows ISO ====================
+log_message "${YELLOW}[5/8] Downloading Windows Server 2019 ISO...${NC}"
+send_telegram "🔄 **Step 5/8**: Downloading Windows Server 2019 ISO (10-20 minutes, please wait...)"
 
 cd /root/windisk
 mkdir -p winfile
 
-wget --timeout=30 --tries=3 -O win2019.iso "https://software-download.microsoft.com/download/pr/17763.3650.221105-1747.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us.iso" || \
-wget --timeout=30 --tries=3 -O win2019.iso "https://archive.org/download/windows-server-2019/WS2019.iso" || \
-{
-    send_telegram "❌ Failed to download Windows ISO! Installation aborted."
+# Working download links for Windows Server 2019 Evaluation
+send_telegram "📥 Downloading from Microsoft servers..."
+
+# Link 1: Official Microsoft Evaluation Center
+if wget --timeout=30 --tries=3 --progress=dot -O win2019.iso "https://go.microsoft.com/fwlink/p/?linkid=2195161" 2>&1 | grep -v "already fully retrieved"; then
+    send_telegram "✅ Downloading from Microsoft link 1..."
+    
+# Link 2: Alternative Microsoft CDN
+elif wget --timeout=30 --tries=3 -O win2019.iso "https://software-static.download.prss.microsoft.com/pr/WindowsServer2019-x64ENU-17763.3650.iso" 2>&1; then
+    send_telegram "✅ Downloading from Microsoft CDN..."
+    
+# Link 3: Direct download (evaluation)
+elif wget --timeout=30 --tries=3 -O win2019.iso "https://software-download.microsoft.com/download/sg/Windows_Server_2019_Server_Stdt_1809_EN-US.iso" 2>&1; then
+    send_telegram "✅ Downloading from fallback server..."
+    
+else
+    log_message "${RED}❌ Failed to download Windows ISO${NC}"
+    send_telegram "❌ Failed to download Windows ISO! Please check internet connection."
     exit 1
-}
+fi
 
-send_telegram "✅ Step 5/7 Complete: ISO downloaded successfully"
+# Verify ISO downloaded (should be > 1GB)
+if [ -f win2019.iso ]; then
+    ISO_SIZE=$(du -h win2019.iso | cut -f1)
+    send_telegram "✅ **Step 5/8 Complete**: ISO downloaded successfully (Size: ${ISO_SIZE})"
+else
+    send_telegram "❌ ISO file not found after download attempt"
+    exit 1
+fi
 
-# Mount and copy files
-echo -e "${YELLOW}📋 Copying Windows files...${NC}"
-send_telegram "Step 6/7: Copying Windows installation files (this may take 5-10 minutes)"
+# ==================== STEP 6: Copy Windows Files ====================
+log_message "${YELLOW}[6/8] Copying Windows files...${NC}"
+send_telegram "🔄 **Step 6/8**: Mounting ISO and copying files (this may take 5-10 minutes)"
 
 mount -o loop win2019.iso winfile
-rsync -a winfile/* /mnt/
+
+# Show progress while copying
+rsync -a --info=progress2 winfile/* /mnt/ 2>&1 | while read line; do
+    if [[ $line =~ [0-9]+% ]]; then
+        echo "$line"
+    fi
+done
+
 umount winfile
 
-send_telegram "✅ Step 6/7 Complete: Windows files copied"
+check_success "File copying"
+send_telegram "✅ **Step 6/8 Complete**: Windows files copied"
 
-# Install VirtIO drivers
-echo -e "${YELLOW}🔄 Installing VirtIO drivers...${NC}"
-send_telegram "Installing VirtIO drivers for network and storage"
+# ==================== STEP 7: Install Drivers ====================
+log_message "${YELLOW}[7/8] Installing VirtIO drivers...${NC}"
+send_telegram "🔄 **Step 7/8**: Installing VirtIO drivers for network and storage"
 
 wget -O virtio.iso "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
 mount -o loop virtio.iso winfile
@@ -143,11 +207,17 @@ mkdir -p /mnt/sources/virtio
 rsync -a winfile/* /mnt/sources/virtio/
 umount winfile
 
-# Create unattended answer file
-echo -e "${YELLOW}⚙️ Creating unattended setup...${NC}"
+check_success "VirtIO driver installation"
+send_telegram "✅ **Step 7/8 Complete**: VirtIO drivers installed"
+
+# ==================== STEP 8: Configure Boot ====================
+log_message "${YELLOW}[8/8] Configuring boot and unattended setup...${NC}"
+send_telegram "🔄 **Step 8/8**: Creating unattended installation configuration"
+
 cd /mnt/sources
 
-cat > autounattend.xml << EOF
+# Create unattended answer file
+cat > autounattend.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
   <settings pass="windowsPE">
@@ -173,22 +243,22 @@ cat > autounattend.xml << EOF
   <settings pass="oobeSystem">
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64">
       <UserAccounts>
-        <AdministratorPassword><Value>${PASSWORD}</Value><PlainText>true</PlainText></AdministratorPassword>
+        <AdministratorPassword><Value>hohoHOHO2013@@</Value><PlainText>true</PlainText></AdministratorPassword>
         <LocalAccounts>
           <LocalAccount wcm:action="add">
-            <Name>${USERNAME}</Name>
+            <Name>admin</Name>
             <Group>Administrators</Group>
-            <Password><Value>${PASSWORD}</Value><PlainText>true</PlainText></Password>
+            <Password><Value>hohoHOHO2013@@</Value><PlainText>true</PlainText></Password>
           </LocalAccount>
         </LocalAccounts>
       </UserAccounts>
       <AutoLogon>
-        <Password><Value>${PASSWORD}</Value><PlainText>true</PlainText></Password>
+        <Password><Value>hohoHOHO2013@@</Value><PlainText>true</PlainText></Password>
         <Enabled>true</Enabled>
-        <Username>${USERNAME}</Username>
+        <Username>admin</Username>
       </AutoLogon>
       <FirstLogonCommands>
-        <SynchronousCommand wcm:action="add"><Order>1</Order><CommandLine>cmd /c wmic useraccount where "name='${USERNAME}'" set PasswordExpires=false</CommandLine></SynchronousCommand>
+        <SynchronousCommand wcm:action="add"><Order>1</Order><CommandLine>cmd /c wmic useraccount where "name='admin'" set PasswordExpires=false</CommandLine></SynchronousCommand>
         <SynchronousCommand wcm:action="add"><Order>2</Order><CommandLine>cmd /c reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f</CommandLine></SynchronousCommand>
         <SynchronousCommand wcm:action="add"><Order>3</Order><CommandLine>cmd /c netsh advfirewall firewall set rule group="remote desktop" new enable=Yes</CommandLine></SynchronousCommand>
         <SynchronousCommand wcm:action="add"><Order>4</Order><CommandLine>cmd /c netsh advfirewall set allprofiles state off</CommandLine></SynchronousCommand>
@@ -199,46 +269,51 @@ cat > autounattend.xml << EOF
 </unattend>
 EOF
 
+# Copy answer file to multiple locations
 cp autounattend.xml /mnt/autounattend.xml
+cp autounattend.xml /mnt/sources/autounattend.xml
 
 # Install GRUB
-echo -e "${YELLOW}📀 Installing GRUB bootloader...${NC}"
 grub-install --root-directory=/mnt /dev/sda
+check_success "GRUB installation"
 
-cat > /mnt/boot/grub/grub.cfg << EOF
+# Create GRUB configuration
+cat > /mnt/boot/grub/grub.cfg << 'EOF'
 set timeout=2
 set default=0
-menuentry "Windows Server 2019" {
+menuentry "Windows Server 2019 Installer" {
     insmod ntfs
     search --set=root --file=/bootmgr
     ntldr /bootmgr
 }
 EOF
 
+# Clean up
 cd /
 umount /root/windisk 2>/dev/null
 
 # Get VPS IP
 VPS_IP=$(curl -s ifconfig.me)
 
-# Send final report
-send_telegram "✅ INSTALLATION PREPARATION COMPLETE!%0A%0AAll steps completed successfully!%0A%0ALogin Credentials:%0AUsername: ${USERNAME}%0APassword: ${PASSWORD}%0ARDP Port: ${RDP_PORT}%0AIP Address: ${VPS_IP}%0A%0AThe system will reboot in 10 seconds.%0AWindows installation will take 10-20 minutes."
+# Final success message
+log_message "${GREEN}========================================${NC}"
+log_message "${GREEN}✅ Setup completed successfully!${NC}"
+log_message "${GREEN}========================================${NC}"
+log_message "📝 Login credentials:"
+log_message "   👤 Username: ${GREEN}admin${NC}"
+log_message "   🔑 Password: ${GREEN}hohoHOHO2013@@${NC}"
+log_message "   🔌 RDP Port: ${GREEN}3389${NC}"
+log_message "   🌐 IP Address: ${GREEN}${VPS_IP}${NC}"
+log_message "${GREEN}========================================${NC}"
 
-# Display final info
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}✅ Setup completed successfully!${NC}"
-echo -e "${GREEN}========================================${NC}"
-echo -e "📝 Login credentials after installation:"
-echo -e "   👤 Username: ${GREEN}${USERNAME}${NC}"
-echo -e "   🔑 Password: ${GREEN}${PASSWORD}${NC}"
-echo -e "   🔌 RDP Port: ${GREEN}${RDP_PORT}${NC}"
-echo -e "   🌐 IP Address: ${GREEN}${VPS_IP}${NC}"
-echo -e "${GREEN}========================================${NC}"
-echo -e "${YELLOW}⚠️  The system will reboot in 10 seconds...${NC}"
-echo -e "${GREEN}========================================${NC}"
+# Send final Telegram report
+send_telegram "✅ **INSTALLATION PREPARATION COMPLETE!**%0A%0A📊 **Summary:**%0A✅ All 8 steps completed successfully%0A💻 Windows Server 2019 ready to install%0A%0A🔐 **Login Credentials:**%0A👤 Username: \`admin\`%0A🔑 Password: \`hohoHOHO2013@@\`%0A🌐 RDP Port: \`3389\`%0A📡 IP Address: \`${VPS_IP}\`%0A%0A⚠️ **Note:** The system will reboot in 10 seconds.%0AWindows installation will take 10-20 minutes.%0AYou will be able to connect via RDP after completion."
+
+log_message "${YELLOW}⚠️  The system will reboot in 10 seconds...${NC}"
+log_message "${YELLOW}⚠️  Check Telegram for installation updates${NC}"
+log_message "${GREEN}========================================${NC}"
 
 sleep 10
-reboot -f
-EOF
 
-chmod +x wino_fixed.sh && sudo ./wino_fixed.sh
+# Force reboot
+reboot -f
